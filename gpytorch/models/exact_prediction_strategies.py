@@ -41,7 +41,7 @@ class DefaultPredictionStrategy(object):
     def __init__(self, train_inputs, train_prior_dist, train_labels, likelihood, root=None, inv_root=None):
         # Flatten the training labels
         train_shape = train_prior_dist.event_shape
-        train_labels = train_labels.view(*train_labels.shape[: -len(train_shape)], train_shape.numel())
+        train_labels = train_labels.reshape(*train_labels.shape[: -len(train_shape)], train_shape.numel())
 
         self.train_inputs = train_inputs
         self.train_prior_dist = train_prior_dist
@@ -129,7 +129,7 @@ class DefaultPredictionStrategy(object):
 
         batch_shape = full_inputs[0].shape[:-2]
 
-        full_mean = full_mean.view(*batch_shape, -1)
+        full_mean = full_mean.reshape(*batch_shape, -1)
         num_train = self.num_train
 
         # Evaluate fant x train and fant x fant covariance matrices, leave train x train unevaluated.
@@ -222,7 +222,7 @@ class DefaultPredictionStrategy(object):
         # Use pseudo-inverse of Z as new inv root
         Q, R = torch.qr(new_root)
         Rdiag = torch.diagonal(R, dim1=-2, dim2=-1)
-        # if R is almost singular, add jitter (Rdiag is a view, so this works)
+        # if R is almost singular, add jitter (Rdiag is a reshape, so this works)
         zeroish = Rdiag.abs() < 1e-6
         if torch.any(zeroish):
             # can't use in-place operation here b/c it would mess up backward pass
