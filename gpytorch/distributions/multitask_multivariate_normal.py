@@ -34,7 +34,7 @@ class MultitaskMultivariateNormal(MultivariateNormal):
             raise RuntimeError("mean should be a matrix or a batch matrix (batch mode)")
 
         self._output_shape = mean.shape
-        # TODO: Instead of transpose / view operations, use a PermutationLazyTensor (see #539) to handle interleaving
+        # TODO: Instead of transpose / reshape operations, use a PermutationLazyTensor (see #539) to handle interleaving
         self._interleaved = interleaved
         if self._interleaved:
             mean_mvn = mean.reshape(*mean.shape[:-2], -1)
@@ -171,15 +171,15 @@ class MultitaskMultivariateNormal(MultivariateNormal):
         if not self._interleaved:
             # flip shape of last two dimensions
             new_shape = sample_shape + self._output_shape[:-2] + self._output_shape[:-3:-1]
-            return base_samples.view(new_shape).transpose(-1, -2).contiguous()
-        return base_samples.view(*sample_shape, *self._output_shape)
+            return base_samples.reshape(new_shape).transpose(-1, -2).contiguous()
+        return base_samples.reshape(*sample_shape, *self._output_shape)
 
     def log_prob(self, value):
         if not self._interleaved:
             # flip shape of last two dimensions
             new_shape = value.shape[:-2] + value.shape[:-3:-1]
-            value = value.view(new_shape).transpose(-1, -2).contiguous()
-        return super().log_prob(value.view(*value.shape[:-2], -1))
+            value = value.reshape(new_shape).transpose(-1, -2).contiguous()
+        return super().log_prob(value.reshape(*value.shape[:-2], -1))
 
     @property
     def mean(self):
@@ -187,8 +187,8 @@ class MultitaskMultivariateNormal(MultivariateNormal):
         if not self._interleaved:
             # flip shape of last two dimensions
             new_shape = self._output_shape[:-2] + self._output_shape[:-3:-1]
-            return mean.view(new_shape).transpose(-1, -2).contiguous()
-        return mean.view(self._output_shape)
+            return mean.reshape(new_shape).transpose(-1, -2).contiguous()
+        return mean.reshape(self._output_shape)
 
     @property
     def num_tasks(self):
@@ -205,14 +205,14 @@ class MultitaskMultivariateNormal(MultivariateNormal):
                     "of self.mean. Expected ...{} but got {}".format(mean_shape, base_sample_shape)
                 )
             sample_shape = base_samples.shape[: -self.mean.ndimension()]
-            base_samples = base_samples.view(*sample_shape, *self.loc.shape)
+            base_samples = base_samples.reshape(*sample_shape, *self.loc.shape)
 
         samples = super().rsample(sample_shape=sample_shape, base_samples=base_samples)
         if not self._interleaved:
             # flip shape of last two dimensions
             new_shape = sample_shape + self._output_shape[:-2] + self._output_shape[:-3:-1]
-            return samples.view(new_shape).transpose(-1, -2).contiguous()
-        return samples.view(sample_shape + self._output_shape)
+            return samples.reshape(new_shape).transpose(-1, -2).contiguous()
+        return samples.reshape(sample_shape + self._output_shape)
 
     @property
     def variance(self):
@@ -220,5 +220,5 @@ class MultitaskMultivariateNormal(MultivariateNormal):
         if not self._interleaved:
             # flip shape of last two dimensions
             new_shape = self._output_shape[:-2] + self._output_shape[:-3:-1]
-            return var.view(new_shape).transpose(-1, -2).contiguous()
-        return var.view(self._output_shape)
+            return var.reshape(new_shape).transpose(-1, -2).contiguous()
+        return var.reshape(self._output_shape)
